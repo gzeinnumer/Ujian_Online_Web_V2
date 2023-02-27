@@ -1,0 +1,39 @@
+# This is a sample build configuration for PHP.
+# Check our guides at https://confluence.atlassian.com/x/e8YWN for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image: php:7.2.4
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - composer
+        script:
+          - apt-get update && apt-get install -y unzip
+          - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          - composer install
+    - step:
+         name: Deploy to staging
+         deployment: staging
+         trigger: manual
+         image: aariacarterweir/lamp-gitftp:latest
+         script:
+           - git ftp push -u "$FTP_USERNAME" -p "$FTP_PASSWORD" ftp://$FTP_HOST
+  custom: # Pipelines that are triggered manually via the Bitbucket GUI
+      init: # -- First time init
+      - step:
+          image: aariacarterweir/lamp-gitftp:latest
+          script:
+            - git ftp init -u "$FTP_USERNAME" -p "$FTP_PASSWORD" ftp://$FTP_HOST
+      deploy-all: # -- Deploys all files from the selected commit
+      - step:
+          image: aariacarterweir/lamp-gitftp:latest
+          script:
+            - git ftp push -u "$FTP_USERNAME" -p "$FTP_PASSWORD" ftp://$FTP_HOST --all
+      deploy-current: # -- Deploy current
+           - step:
+               image: aariacarterweir/lamp-gitftp:latest
+               script:
+                 - git ftp push -u "$FTP_USERNAME" -p "$FTP_PASSWORD" ftp://$FTP_HOST
